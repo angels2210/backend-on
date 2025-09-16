@@ -30,15 +30,14 @@ export const createRole = async (req, res) => {
     }
 };
 
-// @desc    Actualizar un rol (nombre y permisos)
+// @desc    Actualizar un rol (solo el nombre)
 // @route   PUT /api/roles/:id
 export const updateRole = async (req, res) => {
-    const { name, permissions } = req.body;
+    const { name } = req.body;
     try {
         const role = await Role.findByPk(req.params.id);
         if (role) {
             role.name = name ?? role.name;
-            role.permissions = permissions ?? role.permissions;
             await role.save();
             res.json(role);
         } else {
@@ -74,5 +73,26 @@ export const deleteRole = async (req, res) => {
         res.json({ message: 'Rol eliminado correctamente' });
     } catch (error) {
         res.status(500).json({ message: 'Error al eliminar el rol', error: error.message });
+    }
+};
+
+// @desc    Actualizar SOLO los permisos de un rol
+// @route   PUT /api/roles/:id/permissions
+export const updateRolePermissions = async (req, res) => {
+    const { permissions } = req.body;
+    try {
+        const role = await Role.findByPk(req.params.id);
+        if (role) {
+            role.permissions = permissions || {}; // Actualizamos solo los permisos
+            await role.save();
+            // ¡Importante! Sequelize a veces no refleja el cambio en JSONB inmediatamente.
+            // Recargamos el objeto para asegurar que la respuesta sea correcta.
+            await role.reload();
+            res.json(role);
+        } else {
+            res.status(404).json({ message: 'Rol no encontrado' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error al actualizar los permisos del rol', error: error.message });
     }
 };
