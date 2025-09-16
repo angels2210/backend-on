@@ -1,4 +1,4 @@
-import { Vehicle, Invoice, sequelize } from '../models/index.js';
+import { Vehicle, Invoice, Remesa, sequelize } from '../models/index.js';
 
 // --- CRUD Básico para Vehículos ---
 
@@ -113,10 +113,9 @@ export const unassignInvoiceFromVehicle = async (req, res) => {
 // Marca un vehículo como 'En Ruta' y sus facturas como 'En Tránsito'
 export const dispatchVehicle = async (req, res) => {
     const { id: vehicleId } = req.params;
-    const t = await sequelize.transaction(); // Iniciar transacción
+    const t = await sequelize.transaction();
 
     try {
-        // 1. Identifica todas las facturas asignadas al vehículo con estado 'Pendiente para Despacho'
         const invoicesToDispatch = await Invoice.findAll({
             where: {
                 vehicleId: vehicleId,
@@ -137,8 +136,6 @@ export const dispatchVehicle = async (req, res) => {
             return res.status(404).json({ message: 'Vehículo no encontrado.' });
         }
 
-
-        // 2. Crea un nuevo registro de Remesa con los IDs de las facturas encontradas
         const newRemesa = await Remesa.create({
             id: `rem-${Date.now()}`,
             remesaNumber: `REM-${Date.now().toString().slice(-6)}`,
@@ -147,14 +144,16 @@ export const dispatchVehicle = async (req, res) => {
             vehicleId: vehicleId,
             invoiceIds: invoiceIds,
             totalAmount: invoicesToDispatch.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0),
-            totalPackages: invoicesToDispatch.reduce((sum, inv) => sum + inv.guide.merchandise.reduce((p, m) => p + (m.quantity || 0), 0), 0),
-            // --- CAMBIO CLAVE AQUÍ ---
-            // Se asegura de que si m.weight o m.quantity no existen, se usará 0, evitando errores.
+            
+            // --- CÁLCULOS CORREGIDOS Y ROBUSTOS ---
+            totalPackages: invoicesToDispatch.reduce((sum, inv) => 
+                sum + (inv.guide?.merchandise?.reduce((p, m) => p + (m.quantity || 0), 0) || 0), 0),
+            
             totalWeight: invoicesToDispatch.reduce((sum, inv) =>
-                sum + (inv.guide.merchandise?.reduce((p, m) => p + ((m.weight || 0) * (m.quantity || 0)), 0) || 0), 0),
+                sum + (inv.guide?.merchandise?.reduce((p, m) => p + ((m.weight || 0) * (m.quantity || 0)), 0) || 0), 0),
+
         }, { transaction: t });
 
-        // 3. Actualiza el estado de las facturas a 'En Tránsito' y les asigna el remesaId
         await Invoice.update(
             {
                 shippingStatus: 'En Tránsito',
@@ -163,9 +162,7 @@ export const dispatchVehicle = async (req, res) => {
             { where: { id: invoiceIds }, transaction: t }
         );
 
-        // 4. Actualiza el estado del vehículo a 'En Ruta'
         await vehicle.update({ status: 'En Ruta' }, { transaction: t });
-
         await t.commit();
 
         const updatedInvoices = await Invoice.findAll({ where: { id: invoiceIds } });
@@ -184,6 +181,7 @@ export const dispatchVehicle = async (req, res) => {
         res.status(500).json({ message: 'Error al despachar el vehículo', error: error.message });
     }
 };
+
 
 
 // Finaliza el viaje, marca las facturas como 'Entregada' y libera el vehículo

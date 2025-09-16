@@ -13,18 +13,18 @@ export const createRemesa = async (req, res) => {
     const { vehicleId, invoiceIds } = req.body;
     const t = await sequelize.transaction();
     try {
-        // 1. Calcular totales a partir de las facturas
         const invoices = await Invoice.findAll({ where: { id: invoiceIds }, transaction: t });
         if (invoices.length !== invoiceIds.length) {
             throw new Error('Una o más facturas no fueron encontradas.');
         }
 
-        const totalAmount = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-        const totalPackages = invoices.reduce((sum, inv) => sum + inv.guide.merchandise.reduce((p, m) => p + m.quantity, 0), 0);
-        // Aquí deberíamos tener una función para calcular el peso, la importaremos en un futuro
-        const totalWeight = 0; // Placeholder
+        // --- CÁLCULOS CORREGIDOS ---
+        const totalAmount = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+        const totalPackages = invoices.reduce((sum, inv) => 
+            sum + (inv.guide?.merchandise?.reduce((p, m) => p + (m.quantity || 0), 0) || 0), 0);
+        const totalWeight = invoices.reduce((sum, inv) =>
+            sum + (inv.guide?.merchandise?.reduce((p, m) => p + ((m.weight || 0) * (m.quantity || 0)), 0) || 0), 0);
 
-        // 2. Crear la remesa
         const newRemesa = await Remesa.create({
             ...req.body,
             id: `rem-${Date.now()}`,
@@ -34,7 +34,6 @@ export const createRemesa = async (req, res) => {
             totalWeight
         }, { transaction: t });
 
-        // 3. Asociar la remesa a las facturas
         await Invoice.update(
             { remesaId: newRemesa.id },
             { where: { id: invoiceIds }, transaction: t }
