@@ -25,6 +25,7 @@ import auditLogRoutes from './routes/auditLog.routes.js';
 import cuentaContableRoutes from './routes/cuentaContable.routes.js';
 import productRoutes from './routes/product.routes.js';
 import asociadoRoutes from './routes/asociado.routes.js'; 
+import remesaRoutes from './routes/remesa.routes.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -62,6 +63,8 @@ app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/cuentas-contables', cuentaContableRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/asociados', asociadoRoutes);
+app.use('/api/remesas', remesaRoutes);
+
 
 
 

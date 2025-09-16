@@ -12,10 +12,26 @@ export const getVehicles = async (req, res) => {
 };
 
 export const createVehicle = async (req, res) => {
+    // 1. Extraemos los campos necesarios del cuerpo de la petición.
+    const { asociadoId, placa, modelo, capacidadCarga } = req.body;
+
+    // 2. Verificamos que los campos obligatorios no estén vacíos.
+    if (!asociadoId || !placa || !modelo || !capacidadCarga) {
+        return res.status(400).json({ 
+            message: 'Faltan campos obligatorios. Asegúrese de proporcionar asociado, placa, modelo y capacidad de carga.' 
+        });
+    }
+
     try {
-        const newVehicle = await Vehicle.create({ id: `v-${Date.now()}`, ...req.body });
+        // 3. Si todo está bien, creamos el vehículo.
+        const newVehicle = await Vehicle.create({ 
+            id: `v-${Date.now()}`, 
+            ...req.body 
+        });
         res.status(201).json(newVehicle);
     } catch (error) {
+        // Logueamos el error para depuración en el servidor
+        console.error('Error al crear vehículo:', error); 
         res.status(500).json({ message: 'Error al crear vehículo', error: error.message });
     }
 };

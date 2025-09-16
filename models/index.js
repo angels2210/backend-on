@@ -23,6 +23,7 @@ import ReciboPagoAsociado from './ReciboPagoAsociado.js';
 import Remesa from './Remesa.js';
 import CuentaContable from './cuentaContable.js';
 import Product from './Product.js';
+import InventoryItem from './InventoryItem.js'; 
 
 // --- Definición de Relaciones ---
 
@@ -88,10 +89,10 @@ const syncDatabase = async () => {
 };
 
 export {
-  sequelize,
-  syncDatabase,
-  Role, Office, User, Client, Vehicle, Invoice, Category, ShippingType,
-  PaymentMethod, Supplier, ExpenseCategory, Expense, AssetCategory, Asset,
-  AuditLog, CompanyInfo, Asociado, Certificado, PagoAsociado, ReciboPagoAsociado, Remesa, CuentaContable,
-  Product
+    sequelize,
+    syncDatabase,
+    Role, Office, User, Client, Vehicle, Invoice, Category, ShippingType,
+    PaymentMethod, Supplier, ExpenseCategory, Expense, AssetCategory, Asset,
+    AuditLog, CompanyInfo, Asociado, Certificado, PagoAsociado, ReciboPagoAsociado, Remesa, CuentaContable,
+    Product,InventoryItem
 };
