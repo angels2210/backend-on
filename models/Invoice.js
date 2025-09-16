@@ -7,7 +7,7 @@ const Invoice = sequelize.define('Invoice', {
     primaryKey: true,
   },
   invoiceNumber: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING, // Cambiado de INTEGER a STRING
     allowNull: false,
     unique: true,
   },

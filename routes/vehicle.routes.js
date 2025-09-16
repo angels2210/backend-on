@@ -1,12 +1,13 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.middleware.js';
+// 1. IMPORTA LAS NUEVAS FUNCIONES
 import {
     getVehicles, createVehicle, updateVehicle, deleteVehicle,
-    assignInvoicesToVehicle, unassignInvoiceFromVehicle,
-    dispatchVehicle, finalizeTrip
+    dispatchVehicle, finalizeTrip, assignInvoicesToVehicle, unassignInvoiceFromVehicle 
 } from '../controllers/vehicle.controller.js';
+import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
 router.use(protect); // Todas las rutas de vehículos están protegidas
 
 router.route('/')
@@ -17,10 +18,17 @@ router.route('/:id')
     .put(authorize('flota.edit'), updateVehicle)
     .delete(authorize('flota.delete'), deleteVehicle);
 
-// Rutas de operaciones
-router.post('/:id/assign-invoices', authorize('flota.edit'), assignInvoicesToVehicle);
-router.post('/:id/unassign-invoice', authorize('flota.edit'), unassignInvoiceFromVehicle);
-router.post('/:id/dispatch', authorize('flota.dispatch'), dispatchVehicle);
-router.post('/:id/finalize-trip', authorize('flota.dispatch'), finalizeTrip);
+// 2. AÑADE LAS NUEVAS RUTAS
+router.route('/:vehicleId/assign-invoices')
+    .post(authorize('flota.edit'), assignInvoicesToVehicle);
+
+router.route('/:vehicleId/unassign-invoice')
+    .post(authorize('flota.edit'), unassignInvoiceFromVehicle);
+    
+router.route('/:id/dispatch')
+    .post(authorize('flota.dispatch'), dispatchVehicle);
+
+router.route('/:id/finalize-trip')
+    .post(authorize('flota.dispatch'), finalizeTrip);
 
 export default router;
