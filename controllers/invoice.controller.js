@@ -11,27 +11,22 @@ export const getInvoices = async (req, res) => {
 };
 
 export const createInvoice = async (req, res) => {
-    // 1. Inicia una transacción para asegurar la integridad de los datos
+    // Start a managed transaction. Sequelize will automatically commit or roll back.
     const t = await sequelize.transaction();
-
     try {
-        // --- CAMBIO CLAVE ---
-        // Desestructuramos el body, ignorando explícitamente los IDs que pueda enviar el frontend.
-        // Solo tomamos los datos que nos interesan.
-        const { guide, totalAmount, date, ...otherData } = req.body;
-        const { sender, receiver, merchandise } = guide;
+        const { guide, ...invoiceData } = req.body;
+        const { sender, receiver } = guide;
 
-        // 2. Validar que los datos del remitente y destinatario están completos
+        // 1. Validate client data
         const validateClient = (client, type) => {
-            if (!client || !client.idNumber || !client.name || !client.phone || !client.address) {
-                throw new Error(`Los datos del ${type} están incompletos. Por favor, llene todos los campos.`);
+            if (!client || !client.idNumber || !client.name) {
+                throw new Error(`Los datos del ${type} están incompletos.`);
             }
         };
         validateClient(sender, 'remitente');
         validateClient(receiver, 'destinatario');
 
-        // 3. Busca o crea los clientes (remitente y destinatario)
-        // Esto previene clientes duplicados y asegura que existan en la BD
+        // 2. Find or create clients within the transaction
         const [senderClient] = await Client.findOrCreate({
             where: { idNumber: sender.idNumber },
             defaults: { ...sender, id: `C-${Date.now()}` },
@@ -43,47 +38,44 @@ export const createInvoice = async (req, res) => {
             transaction: t
         });
 
-        // 4. Obtiene el correlativo actual de la empresa de forma segura (con bloqueo)
-        const companyInfo = await CompanyInfo.findByPk(1, { transaction: t, lock: true });
+        // 3. Lock the CompanyInfo row and get the next invoice number
+        const companyInfo = await CompanyInfo.findByPk(1, { transaction: t, lock: t.LOCK.UPDATE });
         if (!companyInfo) {
-            throw new Error('No se pudo encontrar la configuración de la empresa para generar el correlativo.');
+            throw new Error('Información de la empresa no encontrada.');
         }
 
-        // 5. Genera el SIGUIENTE número de factura y control de forma segura
         const nextInvoiceNum = (companyInfo.lastInvoiceNumber || 0) + 1;
         const newInvoiceNumberFormatted = `F-${String(nextInvoiceNum).padStart(6, '0')}`;
         const newControlNumber = String(nextInvoiceNum).padStart(8, '0');
+        
+        // 4. Update the counter within the same transaction
+        companyInfo.lastInvoiceNumber = nextInvoiceNum;
+        await companyInfo.save({ transaction: t });
 
-        // 6. Crea la factura en la base de datos con los datos CORRECTOS y GENERADOS por el backend
+        // 5. Create the new invoice
         const newInvoice = await Invoice.create({
-            ...otherData, // Resto de datos del body
-            id: `INV-${Date.now()}`, // El ID de la factura lo generamos aquí para que sea único
-            invoiceNumber: newInvoiceNumberFormatted, // El número de factura generado
-            controlNumber: newControlNumber,        // El número de control generado
-            date: date,
-            totalAmount: totalAmount,
+            ...invoiceData,
+            id: `INV-${Date.now()}`,
+            invoiceNumber: newInvoiceNumberFormatted,
+            controlNumber: newControlNumber,
             clientName: senderClient.name,
             clientIdNumber: senderClient.idNumber,
-            // Actualizamos la guía con los IDs de cliente correctos de la BD
             guide: { ...guide, sender: { ...sender, id: senderClient.id }, receiver: { ...receiver, id: receiverClient.id } },
             status: 'Activa',
             paymentStatus: 'Pendiente',
             shippingStatus: 'Pendiente para Despacho',
         }, { transaction: t });
-
-        // 7. Actualiza el número de la última factura en la tabla de la empresa
-        companyInfo.lastInvoiceNumber = nextInvoiceNum;
-        await companyInfo.save({ transaction: t });
         
-        // 8. Si todo fue exitoso, confirma la transacción
+        // If everything above succeeded, the transaction will be committed.
         await t.commit();
+
         res.status(201).json(newInvoice);
 
     } catch (error) {
-        // 9. Si algo falla, revierte TODOS los cambios hechos en la transacción
+        // If any step fails, the transaction is rolled back automatically.
         await t.rollback();
-        console.error('Error detallado al crear la factura:', error);
-        res.status(500).json({ message: error.message || 'Error interno del servidor al crear la factura.' });
+        console.error('Error al crear la factura:', error);
+        res.status(500).json({ message: error.message || 'Error al crear la factura' });
     }
 };
 
