@@ -11,13 +11,17 @@ export const getInvoices = async (req, res) => {
 };
 
 export const createInvoice = async (req, res) => {
+    // 1. Inicia una transacción para asegurar la integridad de los datos
     const t = await sequelize.transaction();
+
     try {
-        // Excluimos invoiceNumber del body para evitar que el frontend lo sobreescriba
-        const { guide, clientName, clientIdNumber, invoiceNumber, ...invoiceData } = req.body;
+        // --- CAMBIO CLAVE ---
+        // Desestructuramos el body, ignorando explícitamente los IDs que pueda enviar el frontend.
+        // Solo tomamos los datos que nos interesan.
+        const { guide, totalAmount, date, ...otherData } = req.body;
         const { sender, receiver, merchandise } = guide;
 
-        // 1. Validar datos del remitente y destinatario
+        // 2. Validar que los datos del remitente y destinatario están completos
         const validateClient = (client, type) => {
             if (!client || !client.idNumber || !client.name || !client.phone || !client.address) {
                 throw new Error(`Los datos del ${type} están incompletos. Por favor, llene todos los campos.`);
@@ -26,7 +30,8 @@ export const createInvoice = async (req, res) => {
         validateClient(sender, 'remitente');
         validateClient(receiver, 'destinatario');
 
-        // 2. Asegurar que los clientes existan o crearlos
+        // 3. Busca o crea los clientes (remitente y destinatario)
+        // Esto previene clientes duplicados y asegura que existan en la BD
         const [senderClient] = await Client.findOrCreate({
             where: { idNumber: sender.idNumber },
             defaults: { ...sender, id: `C-${Date.now()}` },
@@ -38,43 +43,47 @@ export const createInvoice = async (req, res) => {
             transaction: t
         });
 
-        // 3. Obtener el correlativo de la empresa
+        // 4. Obtiene el correlativo actual de la empresa de forma segura (con bloqueo)
         const companyInfo = await CompanyInfo.findByPk(1, { transaction: t, lock: true });
         if (!companyInfo) {
-            throw new Error('Información de la empresa no encontrada.');
+            throw new Error('No se pudo encontrar la configuración de la empresa para generar el correlativo.');
         }
 
-        // 4. Generar el nuevo número de factura y control en el formato correcto
+        // 5. Genera el SIGUIENTE número de factura y control de forma segura
         const nextInvoiceNum = (companyInfo.lastInvoiceNumber || 0) + 1;
         const newInvoiceNumberFormatted = `F-${String(nextInvoiceNum).padStart(6, '0')}`;
         const newControlNumber = String(nextInvoiceNum).padStart(8, '0');
 
-        // 5. Crear la factura con los datos generados por el backend
+        // 6. Crea la factura en la base de datos con los datos CORRECTOS y GENERADOS por el backend
         const newInvoice = await Invoice.create({
-            ...invoiceData,
-            id: `INV-${Date.now()}`,
-            invoiceNumber: newInvoiceNumberFormatted, // Usamos el número con formato
-            controlNumber: newControlNumber,
+            ...otherData, // Resto de datos del body
+            id: `INV-${Date.now()}`, // El ID de la factura lo generamos aquí para que sea único
+            invoiceNumber: newInvoiceNumberFormatted, // El número de factura generado
+            controlNumber: newControlNumber,        // El número de control generado
+            date: date,
+            totalAmount: totalAmount,
             clientName: senderClient.name,
             clientIdNumber: senderClient.idNumber,
+            // Actualizamos la guía con los IDs de cliente correctos de la BD
             guide: { ...guide, sender: { ...sender, id: senderClient.id }, receiver: { ...receiver, id: receiverClient.id } },
             status: 'Activa',
             paymentStatus: 'Pendiente',
             shippingStatus: 'Pendiente para Despacho',
         }, { transaction: t });
 
-        // 6. Actualizar el correlativo en la información de la empresa
+        // 7. Actualiza el número de la última factura en la tabla de la empresa
         companyInfo.lastInvoiceNumber = nextInvoiceNum;
         await companyInfo.save({ transaction: t });
         
-        // ... (el resto de la lógica para InventoryItem no cambia)
-
+        // 8. Si todo fue exitoso, confirma la transacción
         await t.commit();
         res.status(201).json(newInvoice);
+
     } catch (error) {
+        // 9. Si algo falla, revierte TODOS los cambios hechos en la transacción
         await t.rollback();
-        console.error('Error al crear la factura:', error);
-        res.status(500).json({ message: error.message || 'Error al crear la factura' });
+        console.error('Error detallado al crear la factura:', error);
+        res.status(500).json({ message: error.message || 'Error interno del servidor al crear la factura.' });
     }
 };
 
