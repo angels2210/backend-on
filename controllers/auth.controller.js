@@ -3,7 +3,7 @@ import { User, Role } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
 
-// @desc    Autenticar un usuario y obtener un token
+// @desc    Autenticar un usuario y obtener tokens
 // @route   POST /api/auth/login
 export const login = async (req, res) => {
     const { username, password } = req.body;
@@ -13,24 +13,24 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: 'Por favor, proporcione un usuario y contraseña.' });
         }
 
-        // Buscamos al usuario e incluimos su rol para devolver toda la información necesaria.
         const user = await User.findOne({ 
             where: { username },
             include: { model: Role } 
         });
 
-        // Verificamos si el usuario existe y si la contraseña es correcta usando el método del modelo.
         if (user && await bcrypt.compare(password, user.password)) {
-            // Creamos el token JWT
-            const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-                expiresIn: '1d', // El token expirará en 1 día
+            const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+                expiresIn: '15m',
+            });
+            const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
+                expiresIn: '1h',
             });
 
-            // Excluimos la contraseña del objeto de usuario que devolvemos
             const { password: _, ...userWithoutPassword } = user.toJSON();
 
             res.json({
-                token,
+                accessToken,
+                refreshToken,
                 user: userWithoutPassword,
             });
         } else {
@@ -39,6 +39,34 @@ export const login = async (req, res) => {
     } catch (error) {
         console.error('Error en el login:', error);
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// @desc    Refrescar el token de acceso usando un refresh token
+// @route   POST /api/auth/refresh
+export const refreshToken = async (req, res) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(401).json({ message: 'No se proporcionó un refresh token.' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ message: 'Usuario no encontrado.' });
+        }
+
+        const newAccessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+            expiresIn: '15m',
+        });
+
+        res.json({ accessToken: newAccessToken });
+
+    } catch (error) {
+        return res.status(403).json({ message: 'Refresh token inválido o expirado. Por favor, inicie sesión de nuevo.' });
     }
 };
 
