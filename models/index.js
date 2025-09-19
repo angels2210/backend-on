@@ -81,12 +81,15 @@ Vehicle.hasMany(Remesa, { foreignKey: 'vehicleId' });
 // --- Sincronización de la Base de Datos ---
 const syncDatabase = async () => {
     try {
-        await sequelize.sync({ alter: true });
-        console.log('Base de datos y tablas sincronizadas correctamente.');
+        console.log("--- INTENTANDO SINCRONIZAR LA BASE DE DATOS ---");
+        await sequelize.sync({ alter : true }); // Usamos 'force' temporalmente
+        console.log('¡Base de datos RE-CREADA desde cero!');
     } catch (error) {
-        console.error('Error al sincronizar la base de datos:', error);
+        console.error('--- ERROR DURANTE LA SINCRONIZACIÓN ---:', error);
     }
 };
+
+console.log('--- [PRUEBA 2] Modelos registrados en Sequelize:', Object.keys(sequelize.models), '---'); // <-- AÑADE ESTA LÍNEA
 
 export {
     sequelize,

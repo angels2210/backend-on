@@ -1,15 +1,19 @@
+// routes/companyInfo.routes.js
+
 import express from 'express';
-import { getCompanyInfo, updateCompanyInfo } from '../controllers/companyInfo.controller.js';
+// Importa la nueva función del controlador
+import { getCompanyInfo, updateCompanyInfo, getLatestBcvRate } from '../controllers/companyInfo.controller.js'; 
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// 1. Ruta PÚBLICA para obtener la información de la empresa.
-// Cualquiera puede acceder a esta ruta para cargar la pantalla de login.
+// Ruta pública para obtener info de la empresa (pantalla de login)
 router.get('/', getCompanyInfo);
 
-// 2. Ruta PROTEGIDA para actualizar la información.
-// Solo usuarios autenticados y con el permiso correcto pueden acceder.
-router.put('/', protect, authorize('config.company.edit'), updateCompanyInfo);
+// Rutas protegidas
+router.put('/', protect, authorize('settings.edit'), updateCompanyInfo);
+
+// Añade esta nueva ruta para actualizar la tasa
+router.get('/bcv-rate', protect, authorize('settings.edit'), getLatestBcvRate);
 
 export default router;

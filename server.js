@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { sequelize, syncDatabase } from './models/index.js';
 
+
 // Importar todas las rutas
 import authRoutes from './routes/auth.routes.js';
 import companyInfoRoutes from './routes/companyInfo.routes.js'; // <-- MOVIMOS ESTA LÍNEA HACIA ARRIBA
@@ -26,6 +27,8 @@ import cuentaContableRoutes from './routes/cuentaContable.routes.js';
 import productRoutes from './routes/product.routes.js';
 import asociadoRoutes from './routes/asociado.routes.js'; 
 import remesaRoutes from './routes/remesa.routes.js';
+
+console.log('--- [PRUEBA 3] Ejecutando server.js ---'); // <-- AÑADE ESTA LÍNEA
 
 // Cargar variables de entorno
 dotenv.config();
@@ -94,6 +97,7 @@ const startServer = async () => {
         process.exit(1); // Detiene la aplicación si hay un error crítico
     }
 };
+
 
 // Llamar a la función para arrancar todo el proceso
 startServer();
