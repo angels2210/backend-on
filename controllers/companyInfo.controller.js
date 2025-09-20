@@ -45,16 +45,20 @@ export const updateCompanyInfo = async (req, res) => {
 // @route   GET /api/company-info/bcv-rate
 export const getLatestBcvRate = async (req, res) => {
     try {
-        // Hacemos una petición a la API pública que no requiere clave
         const response = await axios.get('https://ve.dolarapi.com/v1/dolares/oficial');
-        const rate = response.data.price;
+        
+        // CORRECCIÓN FINAL: Usamos 'promedio' como valor principal
+        const rate = response.data?.promedio;
 
-        if (!rate) {
-            return res.status(404).json({ message: 'No se pudo obtener la tasa de cambio.' });
+        if (!rate || typeof rate !== 'number') {
+            console.warn('La respuesta de DolarAPI no incluyó un promedio válido:', response.data);
+            return res.status(404).json({ message: 'No se pudo obtener una tasa de cambio válida del proveedor.' });
         }
+        
         res.json({ rate });
+
     } catch (error) {
-        console.error('Error al obtener la tasa del BCV:', error.message);
-        res.status(500).json({ message: 'Error en el servidor al obtener la tasa.' });
+        console.error('Error al contactar la API de DolarAPI:', error.message);
+        res.status(502).json({ message: 'Error en el servidor al contactar el servicio de tasa de cambio.' });
     }
 };

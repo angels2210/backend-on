@@ -14,6 +14,6 @@ router.get('/', getCompanyInfo);
 router.put('/', protect, authorize('settings.edit'), updateCompanyInfo);
 
 // Añade esta nueva ruta para actualizar la tasa
-router.get('/bcv-rate', protect, authorize('settings.edit'), getLatestBcvRate);
+router.get('/bcv-rate', protect, authorize('config.company.edit'), getLatestBcvRate);
 
 export default router;
