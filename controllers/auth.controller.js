@@ -2,11 +2,13 @@ import jwt from 'jsonwebtoken';
 import { User, Role } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
-
 // @desc    Autenticar un usuario y obtener tokens
 // @route   POST /api/auth/login
 export const login = async (req, res) => {
     const { username, password } = req.body;
+
+    console.log(`\n--- [DEBUG] Intento de login para usuario: ${username} ---`);
+    console.log(`--- [DEBUG] Contraseña recibida: ${password} ---`);
 
     try {
         if (!username || !password) {
@@ -18,27 +20,39 @@ export const login = async (req, res) => {
             include: { model: Role } 
         });
 
-        if (user && await bcrypt.compare(password, user.password)) {
-            const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-                expiresIn: '15m',
-            });
-            const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
-                expiresIn: '1h',
-            });
+        if (user) {
+            console.log(`--- [DEBUG] Hash almacenado en BD: ${user.password} ---`);
 
-            const { password: _, ...userWithoutPassword } = user.toJSON();
+            const isMatch = await bcrypt.compare(password, user.password);
 
-            res.json({
-                accessToken,
-                refreshToken,
-                user: userWithoutPassword,
-            });
-        } else {
-            res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+            console.log(`--- [DEBUG] Resultado de la comparación de contraseñas: ${isMatch} ---`);
+
+            if (isMatch) {
+                console.log('--- [DEBUG] ¡Coincidencia exitosa! Generando tokens... ---');
+                const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+                    expiresIn: '15m',
+                });
+                const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
+                    expiresIn: '1h',
+                });
+
+                const { password: _, ...userWithoutPassword } = user.toJSON();
+
+                return res.json({
+                    accessToken,
+                    refreshToken,
+                    user: userWithoutPassword,
+                });
+            }
         }
+
+        // Si el usuario no existe o la contraseña no coincide
+        console.log('--- [DEBUG] Fallo: Usuario no encontrado o la contraseña no coincide. ---');
+        return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+
     } catch (error) {
-        console.error('Error en el login:', error);
-        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+        console.error('--- [DEBUG] Error catastrófico en el login:', error);
+        return res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };
 
@@ -73,6 +87,6 @@ export const refreshToken = async (req, res) => {
 // @desc    Obtener el perfil del usuario actualmente logueado
 // @route   GET /api/auth/profile
 export const getMe = async (req, res) => {
-    // req.user es añadido por el middleware 'protect' y ya contiene la información que necesitamos.
+    // req.user es añadido por el middleware 'protect'
     res.status(200).json(req.user);
 };
