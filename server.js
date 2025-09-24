@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { sequelize, syncDatabase } from './models/index.js';
+import cron from 'node-cron';
 
 
 // Importar todas las rutas
@@ -27,8 +28,17 @@ import cuentaContableRoutes from './routes/cuentaContable.routes.js';
 import productRoutes from './routes/product.routes.js';
 import asociadoRoutes from './routes/asociado.routes.js'; 
 import remesaRoutes from './routes/remesa.routes.js';
+import { updateBcvRate } from './services/rateUpdater.js';
 
-console.log('--- [PRUEBA 3] Ejecutando server.js ---'); // <-- AÑADE ESTA LÍNEA
+// --- Tareas Programadas (Cron Jobs) ---
+
+// Esta tarea se ejecutará cada 8 horas para actualizar la tasa del BCV.
+// El formato es: 'minuto hora dia-del-mes mes dia-de-la-semana'
+// '0 */8 * * *' significa "a los 0 minutos, cada 8 horas, todos los días".
+cron.schedule('0 */8 * * *', () => {
+  updateBcvRate();
+});
+
 
 // Cargar variables de entorno
 dotenv.config();
@@ -101,3 +111,5 @@ const startServer = async () => {
 
 // Llamar a la función para arrancar todo el proceso
 startServer();
+updateBcvRate();
+console.log('ACTUALIZACION TASA BCV CADA 8HRS')

@@ -29,6 +29,4 @@ const Office = sequelize.define('Office', {
   timestamps: false,
 });
 
-console.log('--- [PRUEBA 1] Archivo models/Office.js cargado ---'); // <-- AÑADE ESTA LÍNEA
-
 export default Office;

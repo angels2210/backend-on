@@ -16,13 +16,14 @@ export const getOffices = async (req, res) => {
 // @desc    Crear una nueva oficina
 // @route   POST /api/offices
 export const createOffice = async (req, res) => {
-    const { id, name, address, phone } = req.body;
+    const { id, code, name, address, phone } = req.body;
     if (!name || !address || !phone) {
         return res.status(400).json({ message: 'Nombre, dirección y teléfono son obligatorios.' });
     }
     try {
         const newOffice = await Office.create({
             id: id || `off-${Date.now()}`,
+            code,
             name,
             address,
             phone,

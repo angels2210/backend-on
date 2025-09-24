@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/', getCompanyInfo);
 
 // Rutas protegidas
-router.put('/', protect, authorize('settings.edit'), updateCompanyInfo);
+router.put('/', protect, authorize('config.company.edit'), updateCompanyInfo);
 
 // Añade esta nueva ruta para actualizar la tasa
 router.get('/bcv-rate', protect, authorize('config.company.edit'), getLatestBcvRate);
