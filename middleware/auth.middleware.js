@@ -54,7 +54,13 @@ export const authorize = (...requiredPermissions) => {
     const hasPermission = requiredPermissions.some(
       (p) => userPermissions[p] === true
     );
-
+ // --- AÑADE ESTAS LÍNEAS DE DEPURACIÓN ---
+  console.log('--- [DEBUG PERMISOS] ---');
+  console.log('Acción requiere:', requiredPermissions);
+  console.log('Usuario tiene:', Object.keys(userPermissions).filter(p => userPermissions[p])); // Muestra solo los permisos activos
+  console.log('¿Permiso concedido?:', hasPermission);
+  console.log('--------------------------');
+  // --- FIN DE LAS LÍNEAS DE DEPURACIÓN ---
     if (!hasPermission) {
       return res.status(403).json({ message: 'No tiene los permisos necesarios para realizar esta acción.' });
     }
