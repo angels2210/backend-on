@@ -1,13 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { sequelize, syncDatabase } from './models/index.js';
 import cron from 'node-cron';
 
-
 // Importar todas las rutas
 import authRoutes from './routes/auth.routes.js';
-import companyInfoRoutes from './routes/companyInfo.routes.js'; // <-- MOVIMOS ESTA LÍNEA HACIA ARRIBA
+import companyInfoRoutes from './routes/companyInfo.routes.js';
 import clientRoutes from './routes/client.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -30,33 +30,28 @@ import asociadoRoutes from './routes/asociado.routes.js';
 import remesaRoutes from './routes/remesa.routes.js';
 import { updateBcvRate } from './services/rateUpdater.js';
 
-// --- Tareas Programadas (Cron Jobs) ---
+// Cargar variables de entorno (solo se necesita una vez)
+dotenv.config();
 
-// Esta tarea se ejecutará cada 8 horas para actualizar la tasa del BCV.
-// El formato es: 'minuto hora dia-del-mes mes dia-de-la-semana'
-// '0 */8 * * *' significa "a los 0 minutos, cada 8 horas, todos los días".
+// --- Tareas Programadas (Cron Jobs) ---
 cron.schedule('0 */8 * * *', () => {
   updateBcvRate();
 });
 
-
-// Cargar variables de entorno
-dotenv.config();
-
 const app = express();
 
 // Middlewares
-app.use(cors()); // Permite peticiones desde el frontend
-// CAMBIO: Aumentamos el límite del tamaño de las peticiones para poder subir imágenes.
+app.use(cors({
+  origin: 'http://localhost:5173', // Especifica el origen de tu frontend
+  credentials: true                 // Permite el envío de cookies
+}));
+app.use(cookieParser()); // Usamos el cookieParser importado arriba
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ limit: '30mb', extended: true }));
 
-// --- ORDEN DE RUTAS CORREGIDO ---
-// 1. Rutas de autenticación (login)
+// --- Rutas de la API ---
 app.use('/api/auth', authRoutes);
-// 2. Ruta pública para la información de la empresa (para la pantalla de login)
 app.use('/api/company-info', companyInfoRoutes);
-// 3. El resto de las rutas (que sí requieren protección)
 app.use('/api/clients', clientRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/users', userRoutes);
@@ -67,7 +62,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/offices', officeRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/shipping-types', shippingTypeRoutes); // Corregido para usar el nombre correcto del archivo
+app.use('/api/shipping-types', shippingTypeRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/expense-categories', expenseCategoryRoutes);
 app.use('/api/asset-categories', assetCategoryRoutes);
@@ -78,38 +73,28 @@ app.use('/api/products', productRoutes);
 app.use('/api/asociados', asociadoRoutes);
 app.use('/api/remesas', remesaRoutes);
 
-
-
-
-// --- Lógica de arranque del servidor y conexión a la BD ---
-
+// --- Lógica de arranque del servidor ---
 const startServer = async () => {
     try {
-        // 1. Autenticar la conexión con la base de datos
         await sequelize.authenticate();
         console.log('Conexión con PostgreSQL establecida correctamente.');
 
-        // 2. Sincronizar los modelos con la base de datos
         await syncDatabase();
         console.log('Tablas sincronizadas correctamente.');
 
-        // Ruta de prueba
         app.get('/api', (req, res) => {
             res.json({ message: 'API de Transporte Alianza funcionando correctamente.' });
         });
 
-        // --- Iniciar el servidor Express ---
         const PORT = process.env.PORT || 5000;
         app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
 
     } catch (error) {
         console.error('No se pudo iniciar el servidor:', error);
-        process.exit(1); // Detiene la aplicación si hay un error crítico
+        process.exit(1);
     }
 };
 
-
-// Llamar a la función para arrancar todo el proceso
 startServer();
 updateBcvRate();
-console.log('ACTUALIZACION TASA BCV CADA 8HRS')
+console.log('ACTUALIZACION TASA BCV CADA 8HRS');
