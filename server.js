@@ -42,8 +42,8 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: 'http://localhost:5173', // Especifica el origen de tu frontend
-  credentials: true                 // Permite el envío de cookies
+  origin: 'http://localhost:3000', // Especifica el origen de tu frontend
+  credentials: false                 // Permite el envío de cookies
 }));
 app.use(cookieParser()); // Usamos el cookieParser importado arriba
 app.use(express.json({ limit: '30mb' }));
