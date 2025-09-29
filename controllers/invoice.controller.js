@@ -1,5 +1,5 @@
 import { Invoice, CompanyInfo, Client, InventoryItem, sequelize } from '../models/index.js';
-
+import { sendInvoiceToHKA } from '../services/theFactoryAPI.service.js';
 
 export const getInvoices = async (req, res) => {
     try {
@@ -98,5 +98,26 @@ export const deleteInvoice = async (req, res) => {
         res.json({ message: 'Factura eliminada' });
     } catch (error) {
         res.status(500).json({ message: 'Error al eliminar la factura', error: error.message });
+    }
+};
+
+export const sendInvoiceToTheFactory = async (req, res) => {
+    try {
+        const invoice = await Invoice.findByPk(req.params.id);
+        if (!invoice) {
+            return res.status(404).json({ message: 'Factura no encontrada' });
+        }
+
+        // Llama al servicio que acabamos de crear
+        const hkaResponse = await sendInvoiceToHKA(invoice);
+
+        // (Opcional) Aquí podrías guardar el estado en tu base de datos.
+        // Por ejemplo, añadiendo un campo `hkaStatus` a tu modelo Invoice.
+        // await invoice.update({ hkaStatus: 'enviada', hkaResponse: hkaResponse });
+
+        res.status(200).json({ message: 'Factura enviada exitosamente a The Factory HKA.', hkaResponse });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Error al enviar la factura.' });
     }
 };
