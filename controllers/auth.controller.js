@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { User, Role } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
-// --- FUNCIÓN DE LOGIN ACTUALIZADA CON COOKIES ---
+// --- FUNCIÓN DE LOGIN CON RESPUESTA DE TOKEN JWT ---
 export const login = async (req, res) => {
     const { username, password } = req.body;
 
@@ -20,33 +20,20 @@ export const login = async (req, res) => {
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
-                // Generamos ambos tokens como antes
+                // Generamos ambos tokens
                 const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-                    expiresIn: '15m', // 15 minutos
+                    expiresIn: '15m',
                 });
                 const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
-                    expiresIn: '1h', // 1 hora
-                });
-
-                // --- CAMBIO: ENVIAMOS TOKENS COMO COOKIES SEGURAS ---
-                res.cookie('accessToken', accessToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict',
-                    maxAge: 15 * 60 * 1000, // 15 minutos
-                });
-
-                res.cookie('refreshToken', refreshToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict',
-                    maxAge: 60 * 60 * 1000, // 1 hora
+                    expiresIn: '1h',
                 });
                 
                 const { password: _, ...userWithoutPassword } = user.toJSON();
 
-                // Enviamos solo los datos del usuario en la respuesta
-                return res.json({ user: userWithoutPassword });
+                // --- CAMBIO: ENVIAMOS TOKENS EN LA RESPUESTA JSON ---
+                return res.json({ 
+                    user: userWithoutPassword, accessToken, refreshToken 
+                });
             }
         }
 
@@ -58,10 +45,10 @@ export const login = async (req, res) => {
     }
 };
 
-// --- FUNCIÓN DE REFRESH TOKEN ACTUALIZADA ---
+// --- FUNCIÓN DE REFRESH TOKEN ---
 export const refreshToken = async (req, res) => {
-    // Leemos el token desde la cookie
-    const token = req.cookies.refreshToken;
+    // Leemos el token desde el cuerpo de la solicitud
+    const { token } = req.body;
 
     if (!token) {
         return res.status(401).json({ message: 'No se proporcionó un refresh token.' });
@@ -75,36 +62,23 @@ export const refreshToken = async (req, res) => {
             return res.status(401).json({ message: 'Usuario no encontrado.' });
         }
 
-        // Generamos y enviamos un nuevo accessToken como cookie
+        // Generamos un nuevo accessToken
         const newAccessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
             expiresIn: '15m',
         });
 
-        res.cookie('accessToken', newAccessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 15 * 60 * 1000,
-        });
-
-        res.status(200).json({ message: 'Token de acceso actualizado' });
+        // --- CAMBIO: Enviamos el nuevo token en la respuesta JSON ---
+        res.status(200).json({ accessToken: newAccessToken });
 
     } catch (error) {
         return res.status(403).json({ message: 'Refresh token inválido o expirado. Por favor, inicie sesión de nuevo.' });
     }
 };
 
-// --- FUNCIÓN DE LOGOUT AÑADIDA ---
+// --- FUNCIÓN DE LOGOUT ---
 export const logout = (req, res) => {
-    // Limpiamos ambas cookies
-    res.cookie('accessToken', '', {
-        httpOnly: true,
-        expires: new Date(0),
-    });
-    res.cookie('refreshToken', '', {
-        httpOnly: true,
-        expires: new Date(0),
-    });
+    // El logout ahora es responsabilidad del cliente (borrar los tokens).
+    // El backend simplemente confirma la acción.
     return res.status(200).json({ message: 'Sesión cerrada exitosamente' });
 };
 

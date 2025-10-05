@@ -1,7 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import { sequelize, syncDatabase } from './models/index.js';
 import cron from 'node-cron';
 
@@ -28,6 +27,7 @@ import cuentaContableRoutes from './routes/cuentaContable.routes.js';
 import productRoutes from './routes/product.routes.js';
 import asociadoRoutes from './routes/asociado.routes.js'; 
 import remesaRoutes from './routes/remesa.routes.js';
+import asientoManualRoutes from './routes/asientoManual.routes.js';
 import { updateBcvRate } from './services/rateUpdater.js';
 
 // Cargar variables de entorno (solo se necesita una vez)
@@ -40,12 +40,30 @@ cron.schedule('0 */8 * * *', () => {
 
 const app = express();
 
+// --- Configuración de CORS ---
+// Lista de orígenes permitidos.
+const allowedOrigins = [
+  'http://localhost:3000', // Origen para desarrollo local.
+  // Expresión regular para aceptar cualquier subdominio del entorno de desarrollo en la nube.
+  /https:\/\/.*-h813239537\.scf\.usercontent\.goog$/ 
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permite peticiones sin origen (como Postman o apps móviles) y las de la whitelist.
+    const isAllowed = allowedOrigins.some(allowedOrigin => 
+      (allowedOrigin instanceof RegExp) ? allowedOrigin.test(origin) : allowedOrigin === origin
+    );
+    if (isAllowed || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  }
+};
+
 // Middlewares
-app.use(cors({
-  origin: 'http://localhost:3000', // Especifica el origen de tu frontend
-  credentials: true                 // Permite el envío de cookies
-}));
-app.use(cookieParser()); // Usamos el cookieParser importado arriba
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ limit: '30mb', extended: true }));
 
@@ -72,6 +90,7 @@ app.use('/api/cuentas-contables', cuentaContableRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/asociados', asociadoRoutes);
 app.use('/api/remesas', remesaRoutes);
+app.use('/api/asientos-manuales', asientoManualRoutes);
 
 // --- Lógica de arranque del servidor ---
 const startServer = async () => {

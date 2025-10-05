@@ -25,6 +25,8 @@ import CuentaContable from './cuentaContable.js';
 import Product from './Product.js';
 import InventoryItem from './InventoryItem.js'; 
 
+import AsientoManual from './AsientoManual.js';
+import AsientoManualEntry from './AsientoManualEntry.js';
 // --- Definición de Relaciones ---
 
 // User <-> Role
@@ -78,6 +80,16 @@ Asociado.hasMany(Remesa, { foreignKey: 'asociadoId' });
 Remesa.belongsTo(Vehicle, { foreignKey: 'vehicleId' });
 Vehicle.hasMany(Remesa, { foreignKey: 'vehicleId' });
 
+// Asiento Manual Relations
+AsientoManual.hasMany(AsientoManualEntry, { as: 'entries', foreignKey: 'asientoManualId', onDelete: 'CASCADE' });
+AsientoManualEntry.belongsTo(AsientoManual, { foreignKey: 'asientoManualId' });
+
+AsientoManualEntry.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'cuentaId' });
+CuentaContable.hasMany(AsientoManualEntry, { foreignKey: 'cuentaId' });
+
+AsientoManual.belongsTo(User, { as: 'createdBy', foreignKey: 'userId' });
+User.hasMany(AsientoManual, { foreignKey: 'userId' });
+
 // --- Sincronización de la Base de Datos ---
 const syncDatabase = async () => {
     try {
@@ -92,6 +104,6 @@ export {
     syncDatabase,
     Role, Office, User, Client, Vehicle, Invoice, Category, ShippingType,
     PaymentMethod, Supplier, ExpenseCategory, Expense, AssetCategory, Asset,
-    AuditLog, CompanyInfo, Asociado, Certificado, PagoAsociado, ReciboPagoAsociado, Remesa, CuentaContable,
+    AuditLog, CompanyInfo, Asociado, Certificado, PagoAsociado, ReciboPagoAsociado, Remesa, CuentaContable, AsientoManual, AsientoManualEntry,
     Product,InventoryItem
 };

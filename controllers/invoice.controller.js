@@ -111,6 +111,9 @@ export const sendInvoiceToTheFactory = async (req, res) => {
         // Llama al servicio que acabamos de crear
         const hkaResponse = await sendInvoiceToHKA(invoice);
 
+        // --- CONSOLE.LOG AÑADIDO ---
+        console.log(`[HKA] Factura ${invoice.invoiceNumber} enviada exitosamente. Respuesta:`, hkaResponse);
+
         // (Opcional) Aquí podrías guardar el estado en tu base de datos.
         // Por ejemplo, añadiendo un campo `hkaStatus` a tu modelo Invoice.
         // await invoice.update({ hkaStatus: 'enviada', hkaResponse: hkaResponse });
@@ -118,6 +121,7 @@ export const sendInvoiceToTheFactory = async (req, res) => {
         res.status(200).json({ message: 'Factura enviada exitosamente a The Factory HKA.', hkaResponse });
 
     } catch (error) {
+        console.error(`[HKA] Error al enviar la factura ${req.params.id}:`, error.message);
         res.status(500).json({ message: error.message || 'Error al enviar la factura.' });
     }
 };
