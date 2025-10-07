@@ -69,8 +69,27 @@ export const sendInvoiceToHKA = async (invoice) => {
 
         const token = await getAuthToken();
 
+        // --- MEJORA: Mapeo de officeId a serie de factura HKA ---
+        const officeSeriesMap = {
+            'office-caracas': 'A', // Oficina Principal sede Caracas
+            'office-terminal-bandera': 'B', // Oficina Terminal la bandera
+            'office-valencia': 'C', // Oficina Valencia
+            'office-barquisimeto-deposito': 'D', // Oficina Barquisimeto Depósito
+            'office-maracaibo-terminal': 'E', // Oficina Maracaibo Terminal
+            'office-maracaibo-deposito': 'F', // Oficina Maracaibo Deposito
+            'office-valera-terminal': 'G', // Oficina Valera terminal
+            'office-barinas-terminal': 'H', // Oficina Barinas terminal
+            'office-guanare-terminal': 'I', // Oficina Guanare Terminal
+            'office-bocono-terminal': 'J', // Oficina BoconoTerminal
+            'office-merida-terminal': 'K', // Oficina Mérida Terminal
+            'office-merida-deposito': 'L', // Oficina Mérida deposito
+            'office-san-cristobal-terminal': 'M', // Oficina San Cristóbal Terminal
+            'office-san-cristobal-deposito': 'N', // Oficina San Cristóbal Deposito
+        };
+
         // --- MEJORA: Formato de fecha y hora simplificado ---
-        const [serie, numero] = invoice.invoiceNumber.split('-');
+        const serie = officeSeriesMap[invoice.officeId] || ""; // Obtener serie por officeId, si no se encuentra, se deja vacía.
+        const numero = invoice.invoiceNumber; // El número es el invoiceNumber completo
         const fechaEmision = new Date(invoice.date);
 
         // --- CORRECCIÓN: Asegurar formato dd/MM/AAAA con ceros iniciales ---
@@ -87,68 +106,110 @@ export const sendInvoiceToHKA = async (invoice) => {
         let subTotalGeneral = 0;
         let ivaGeneral = 0;
 
-        const detalles = (invoice.guide?.merchandise || []).map((item, index) => {
-            const precioUnitario = typeof item.price === 'number' ? item.price : 0;
-            const cantidad = typeof item.quantity === 'number' ? item.quantity : 0;
-            const totalItemConIva = precioUnitario * cantidad;
-            
-            // Asumimos que el precio unitario ya incluye el IVA
-            const itemSubtotal = totalItemConIva / (1 + IVA_RATE);
-            const itemIva = totalItemConIva - itemSubtotal;
-            const precioUnitarioSinIva = precioUnitario / (1 + IVA_RATE);
+        // CORRECCIÓN: Usar el totalAmount de la factura en lugar de recalcular desde items sin precio.
+        // Si la factura tiene un total, lo usamos como la fuente de la verdad.
+        if (invoice.totalAmount && invoice.totalAmount > 0) {
+            subTotalGeneral = invoice.totalAmount / (1 + IVA_RATE);
+            ivaGeneral = invoice.totalAmount - subTotalGeneral;
+        }
 
-            subTotalGeneral += itemSubtotal;
-            ivaGeneral += itemIva;
+        // --- CORRECCIÓN: Distribuir el total proporcionalmente entre los items ---
+        const totalQuantity = (invoice.guide?.merchandise || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+        const detalles = (invoice.guide?.merchandise || []).map((item, index) => {
+            const cantidad = item.quantity || 0;
+            let itemSubtotal = 0;
+            let itemIva = 0;
+
+            // Si hay cantidad total, distribuimos. Si no, evitamos división por cero.
+            if (totalQuantity > 0) {
+                const proportion = cantidad / totalQuantity;
+                itemSubtotal = subTotalGeneral * proportion;
+                itemIva = ivaGeneral * proportion;
+            }
+
+            const precioItemRedondeado = parseFloat(itemSubtotal.toFixed(2));
+            const valorIvaRedondeado = parseFloat(itemIva.toFixed(2));
+            const valorTotalItem = precioItemRedondeado + valorIvaRedondeado;
 
             return {
-                "numeroLinea": (index + 1).toString(),
-                "codigoProducto": item.sku || `GEN-${index + 1}`, // Usar SKU si existe
-                "descripcion": item.description,
-                "cantidad": cantidad.toString(),
-                "precioUnitario": precioUnitarioSinIva.toFixed(2).toString(),
-                "montoTotal": itemSubtotal.toFixed(2).toString(),
-                "impuestos": [{"codigo": "01", "porcentaje": (IVA_RATE * 100).toFixed(2), "monto": itemIva.toFixed(2).toString()}]
+                "NumeroLinea": (index + 1).toString(),
+                "CodigoPLU": item.sku || `GEN-${index + 1}`,
+                "Descripcion": item.description,
+                "Cantidad": cantidad.toString(),
+                "PrecioUnitario": (cantidad > 0 ? itemSubtotal / cantidad : 0).toFixed(2).toString(),
+                "PrecioItem": precioItemRedondeado.toFixed(2).toString(),
+                "CodigoImpuesto": "G", // G para IVA General
+                "TasaIVA": (IVA_RATE * 100).toFixed(0),
+                "ValorIVA": valorIvaRedondeado.toFixed(2).toString(),
+                // CORRECCIÓN: Sumar los valores ya redondeados para evitar discrepancias.
+                "ValorTotalItem": valorTotalItem.toFixed(2).toString()
             };
         });
 
+        // Dependencia para convertir número a letras (se debe instalar)
+        // npm install numero-a-letras
+        const { NumerosALetras } = await import('numero-a-letras');
         const totalGeneral = subTotalGeneral + ivaGeneral;
 
         // --- MEJORA: Tipo de identificación del comprador dinámico ---
         const idType = (invoice.clientIdNumber.charAt(0) || 'V').toUpperCase();
         
         const hkaInvoicePayload = {
-            "documentoElectronico": {
-                "encabezado": {
-                    "identificacionDocumento": {
-                        "tipoDocumento": "01",
-                        "serie": serie,
-                        "numeroDocumento": numero,
-                        "fechaEmision": fechaFormateada,
-                        "horaEmision": horaFormateada,
-                        "tipoDeVenta": "1",
-                        "moneda": "VES",
+            "DocumentoElectronico": {
+                "Encabezado": {
+                    "IdentificacionDocumento": {
+                        "TipoDocumento": "01", // 01 para Factura
+                        "Serie": serie,
+                        "NumeroDocumento": numero,
+                        "FechaEmision": fechaFormateada,
+                        "HoraEmision": horaFormateada,
+                        "TipoDeVenta": "1", // 1 para Venta Interna
+                        "Moneda": "VES", // Moneda del documento
                     },
-                    "emisor": {
-                        "tipoIdentificacion": (companyInfo.rif.charAt(0) || 'J').toUpperCase(),
-                        "numeroIdentificacion": companyInfo.rif,
-                        "razonSocial": companyInfo.name,
-                        "direccion": companyInfo.address,
-                        "telefono": companyInfo.phone
+                    "Emisor": {
+                        "TipoIdentificacion": (companyInfo.rif.charAt(0) || 'J').toUpperCase(),
+                        "NumeroIdentificacion": companyInfo.rif,
+                        "RazonSocial": companyInfo.name,
+                        "Direccion": companyInfo.address,
+                        "Telefono": [companyInfo.phone] // Debe ser un array
                     },
-                    "comprador": {
-                        "tipoIdentificacion": idType,
-                        "numeroIdentificacion": invoice.clientIdNumber,
-                        "razonSocial": invoice.clientName,
-                        "direccion": invoice.guide?.receiver?.address || 'N/A',
-                        "pais": "VE"
+                    "Comprador": {
+                        "TipoIdentificacion": idType,
+                        "NumeroIdentificacion": invoice.clientIdNumber,
+                        "RazonSocial": invoice.clientName,
+                        "Direccion": invoice.guide?.receiver?.address || 'N/A',
+                        "Pais": "VE",
+                        "Telefono": [invoice.guide?.receiver?.phone || '0000-0000000'] // Debe ser un array
+                    },
+                    "Totales": {
+                        "NroItems": detalles.length.toString(),
+                        "MontoGravadoTotal": subTotalGeneral.toFixed(2).toString(),
+                        "MontoExentoTotal": "0.00",
+                        "Subtotal": subTotalGeneral.toFixed(2).toString(),
+                        "TotalIVA": ivaGeneral.toFixed(2).toString(),
+                        "MontoTotalConIVA": totalGeneral.toFixed(2).toString(),
+                        "TotalAPagar": totalGeneral.toFixed(2).toString(),
+                        "MontoEnLetras": NumerosALetras(totalGeneral, { // CORRECCIÓN: Ajuste de opciones para formato HKA
+                            plural: "bolívares",
+                            singular: "bolívar",
+                            centPlural: "céntimos",
+                            centSingular: "céntimo",
+                        }),
+                        "FormasPago": [{
+                            "Forma": "01", // 01: De contado
+                            "Monto": totalGeneral.toFixed(2).toString(),
+                            "Moneda": "VES" // Moneda del pago
+                        }],
+                        "ImpuestosSubtotal": [{
+                            "CodigoTotalImp": "G", // G para IVA General
+                            "AlicuotaImp": (IVA_RATE * 100).toFixed(2),
+                            "BaseImponibleImp": subTotalGeneral.toFixed(2).toString(),
+                            "ValorTotalImp": ivaGeneral.toFixed(2).toString()
+                        }]
                     }
                 },
-                "detallesItems": detalles, // CORRECCIÓN: Renombrado de "detalles" a "detallesItems"
-                "totales": {               // CORRECCIÓN: Agrupado dentro del objeto "totales"
-                    "subTotal": subTotalGeneral.toFixed(2).toString(),
-                    "total": totalGeneral.toFixed(2).toString(),
-                    "impuestos": [{"codigo": "01", "porcentaje": (IVA_RATE * 100).toFixed(2), "monto": ivaGeneral.toFixed(2).toString()}]
-                }
+                "DetallesItems": detalles
             }
         };
 

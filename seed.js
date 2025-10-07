@@ -148,13 +148,102 @@ const seedDatabase = async () => {
     // --- 8. Plan de Cuentas Contables ---
     console.log('Sembrando Plan de Cuentas...');
     await CuentaContable.bulkCreate([
-        { id: 'cta-1101', codigo: '1101', nombre: 'Caja', tipo: 'Activo' },
-        { id: 'cta-1102', codigo: '1102', nombre: 'Bancos', tipo: 'Activo' },
-        { id: 'cta-1105', codigo: '1105', nombre: 'Cuentas por Cobrar - Clientes', tipo: 'Activo' },
-        { id: 'cta-2101', codigo: '2101', nombre: 'Cuentas por Pagar - Proveedores', tipo: 'Pasivo' },
-        { id: 'cta-4101', codigo: '4101', nombre: 'Ingresos por Servicios de Transporte', tipo: 'Ingreso' },
-        { id: 'cta-5101', codigo: '5101', nombre: 'Gasto de Combustible', tipo: 'Gasto' }
-    ], { updateOnDuplicate: ['nombre', 'tipo'] });
+        // 1. ACTIVO
+        { codigo: '1.1.01.00001', nombre: 'EFECTIVO POR DEPOSITAR', tipo: 'Activo' },
+        { codigo: '1.1.02.00001', nombre: 'BANCO BANESCO 5215', tipo: 'Activo' },
+        { codigo: '1.1.02.00002', nombre: 'BANCO BANESCO 7227', tipo: 'Activo' },
+        { codigo: '1.1.02.00003', nombre: 'BANCO PROVINCIAL 8725', tipo: 'Activo' },
+        { codigo: '1.1.02.00004', nombre: 'BANCO PROVINCIAL 6795', tipo: 'Activo' },
+        { codigo: '1.1.03.01001', nombre: 'CUENTAS POR COBRAR MERIDA TERMINAL', tipo: 'Activo' },
+        { codigo: '1.1.03.01002', nombre: 'CUENTAS POR COBRAR MERIDA DEPOSITO', tipo: 'Activo' },
+        { codigo: '1.1.03.01003', nombre: 'CUENTAS POR COBRAR SAN CRISTOBAL', tipo: 'Activo' },
+        { codigo: '1.1.03.01004', nombre: 'CUENTAS POR COBRAR VALENCIA', tipo: 'Activo' },
+        { codigo: '1.1.03.01005', nombre: 'CUENTAS POR COBRAR VALERA', tipo: 'Activo' },
+        { codigo: '1.1.03.01006', nombre: 'CUENTAS POR COBRAR BARINAS', tipo: 'Activo' },
+        { codigo: '1.1.03.01007', nombre: 'CUENTAS POR COBRAR BARQUISIMETO', tipo: 'Activo' },
+        { codigo: '1.1.03.02001', nombre: 'CUENTAS POR COBRAR CLIENTES', tipo: 'Activo' },
+        { codigo: '1.1.03.03001', nombre: 'APORTES POR COBRAR ASOCIADOS', tipo: 'Activo' },
+        { codigo: '1.1.03.04001', nombre: 'CUENTAS POR COBRAR ASOCIADOS', tipo: 'Activo' },
+        { codigo: '1.1.03.05001', nombre: 'OTRAS CUENTAS POR COBRAR', tipo: 'Activo' },
+        { codigo: '1.1.04.00001', nombre: 'ISLR ANTICIPADO', tipo: 'Activo' },
+        { codigo: '1.1.04.00002', nombre: 'ANTICIPOS DE DIETAS', tipo: 'Activo' },
+        { codigo: '1.2.01.0001', nombre: 'INMUEBLES', tipo: 'Activo' },
+        { codigo: '1.2.01.0002', nombre: 'VEHICULOS', tipo: 'Activo' },
+        { codigo: '1.2.01.0003', nombre: 'EQUIPOS DE COMPUTACION', tipo: 'Activo' },
+        { codigo: '1.2.01.0004', nombre: 'MOBILIARIO', tipo: 'Activo' },
+        { codigo: '1.2.01.0005', nombre: 'OTROS EQUIPOS DE OFICINA', tipo: 'Activo' },
+        { codigo: '1.2.02.0001', nombre: 'IVA CREDITO FISCAL', tipo: 'Activo' },
+        { codigo: '1.2.02.0002', nombre: 'SISTEMA ADMINISTRATIVO', tipo: 'Activo' },
+
+        // 2. PASIVO
+        { codigo: '2.1.01.00001', nombre: 'APORTES LEGALES POR PAGAR', tipo: 'Pasivo' },
+        { codigo: '2.1.01.00002', nombre: 'SERVICIOS BÁSICOS POR PAGAR', tipo: 'Pasivo' },
+        { codigo: '2.1.01.00003', nombre: 'FRANQUEO POSTAL POR PAGAR', tipo: 'Pasivo' },
+        { codigo: '2.1.01.00004', nombre: 'REMESAS POR PAGAR', tipo: 'Pasivo' },
+        { codigo: '2.1.01.00005', nombre: 'REMESAS POR PAGAR POR COBROS A DESTINO', tipo: 'Pasivo' },
+        { codigo: '2.1.01.00006', nombre: 'DIETAS POR PAGAR A JUNTA DIRECTIVA', tipo: 'Pasivo' },
+        { codigo: '2.2.01.00001', nombre: 'DEP. ACUMULADA DE INMUEBLES', tipo: 'Pasivo' },
+        { codigo: '2.2.01.00002', nombre: 'DEP. ACUMULADA DE VEHICULOS', tipo: 'Pasivo' },
+        { codigo: '2.2.01.00003', nombre: 'DEP. ACUMULADA DE COMPUTACION', tipo: 'Pasivo' },
+        { codigo: '2.2.01.00004', nombre: 'DEP. ACUMULADA DE MOBILIARIO', tipo: 'Pasivo' },
+        { codigo: '2.2.01.00005', nombre: 'DEP. ACUMULADA DE EQUIPOS DE OFICINA', tipo: 'Pasivo' },
+
+        // 3. PATRIMONIO
+        { codigo: '3.1.01.00001', nombre: 'CERTIFICADOS', tipo: 'Patrimonio' },
+        { codigo: '3.1.01.00002', nombre: 'APORTES DE ASOCIADOS', tipo: 'Patrimonio' },
+        { codigo: '3.1.01.00003', nombre: 'AJUSTES REVALUACION DE PROPIEDADES', tipo: 'Patrimonio' },
+        { codigo: '3.2.01.00001', nombre: 'RESERVA EMERGENCIAS', tipo: 'Patrimonio' },
+        { codigo: '3.2.01.00002', nombre: 'FONDOS DE PROTECCION', tipo: 'Patrimonio' },
+        { codigo: '3.2.01.00003', nombre: 'FONDO DE EDUCACION', tipo: 'Patrimonio' },
+        { codigo: '3.3.01.00001', nombre: 'RESULTADOS DEL EJERCICIO', tipo: 'Patrimonio' },
+
+        // 4. INGRESOS
+        { codigo: '4.1.01.00001', nombre: 'INGRESOS ENC. OFIC. CARACAS', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00002', nombre: 'INGRESOS ENC. OFIC. MERIDA TERMINAL', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00003', nombre: 'INGRESOS ENC. OFIC. MERIDA DEPOSITO', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00004', nombre: 'INGRESOS ENC. OFIC. SAN CRISTOBAL', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00005', nombre: 'INGRESOS ENC. OFIC. VALERA', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00006', nombre: 'INGRESOS ENC. OFIC. VALENCIA', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00007', nombre: 'INGRESOS ENC. OFIC. BARINAS', tipo: 'Ingreso' },
+        { codigo: '4.1.01.00008', nombre: 'INGRESOS ENC. OFIC. BARQUISIMETO', tipo: 'Ingreso' },
+        { codigo: '4.2.01.00001', nombre: 'OTROS INGRESOS', tipo: 'Ingreso' },
+
+        // 5. GASTOS (Costos y Gastos)
+        { codigo: '5.1.01.00001', nombre: 'SERVICIOS ASOEXPRES', tipo: 'Gasto' },
+        { codigo: '5.1.01.00002', nombre: 'COMBUSTIBLE', tipo: 'Gasto' },
+        { codigo: '5.1.01.00003', nombre: 'MMTO Y REPARACION DE VEHICULOS', tipo: 'Gasto' },
+        { codigo: '5.1.01.00004', nombre: 'FRANQUEO POSTAL', tipo: 'Gasto' },
+        { codigo: '5.1.01.00005', nombre: 'OTROS GASTOS IPOSTEL', tipo: 'Gasto' },
+        { codigo: '5.1.01.00006', nombre: 'PERMISOLOGIAS', tipo: 'Gasto' },
+        { codigo: '5.1.01.00007', nombre: 'BONO DE PRODUCCION', tipo: 'Gasto' },
+        { codigo: '5.2.01.00001', nombre: 'IVSS ASOCIADOS', tipo: 'Gasto' },
+        { codigo: '5.2.01.00002', nombre: 'DIETAS JUNTA DIRECTIVA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00003', nombre: 'CORPOELEC', tipo: 'Gasto' },
+        { codigo: '5.2.01.00004', nombre: 'HIDROCAPITAL', tipo: 'Gasto' },
+        { codigo: '5.2.01.00005', nombre: 'CANTV', tipo: 'Gasto' },
+        { codigo: '5.2.01.00006', nombre: 'TELEFONIA CELULAR', tipo: 'Gasto' },
+        { codigo: '5.2.01.00007', nombre: 'FIBRA OPTICA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00008', nombre: 'ALQUILERES DE OFICINA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00009', nombre: 'SERVICIOS DE LIMPIEZA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00010', nombre: 'VIATICOS Y PASAJES', tipo: 'Gasto' },
+        { codigo: '5.2.01.00011', nombre: 'MATERIALES ELECTRICOS', tipo: 'Gasto' },
+        { codigo: '5.2.01.00012', nombre: 'MATERIALES FERRETERIA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00013', nombre: 'PAPELERIA Y ARTICULOS OFICINA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00014', nombre: 'GASTOS GENERALES MTTO OFICINA', tipo: 'Gasto' },
+        { codigo: '5.2.01.00015', nombre: 'MTTO COMPUTACION', tipo: 'Gasto' },
+        { codigo: '5.2.01.00016', 'nombre': 'MTTO OTROS EQUIPOS', tipo: 'Gasto' },
+        { codigo: '5.2.01.00017', nombre: 'GASTOS LEGALES', tipo: 'Gasto' },
+        { codigo: '5.2.01.00018', nombre: 'IMPUESTOS MUNICIPALES', tipo: 'Gasto' },
+        { codigo: '5.2.01.00019', nombre: 'ISLR', tipo: 'Gasto' },
+        { codigo: '5.2.01.00020', nombre: 'HONORARIOS PROFESIONALES', tipo: 'Gasto' },
+        { codigo: '5.2.01.00021', nombre: 'ESTACIONAMIENTO', tipo: 'Gasto' },
+        { codigo: '5.2.01.00022', nombre: 'FACTURACION DIGITAL', tipo: 'Gasto' },
+        { codigo: '5.2.01.00023', nombre: 'OTROS GASTOS', tipo: 'Gasto' },
+        { codigo: '5.2.02.00001', nombre: 'COMISIONES BANESCO 5215', tipo: 'Gasto' },
+        { codigo: '5.2.02.00002', nombre: 'COMISIONES BANESCO 7227', tipo: 'Gasto' },
+        { codigo: '5.2.02.00003', nombre: 'COMISIONES PROVINCIAL 8725', tipo: 'Gasto' },
+        { codigo: '5.2.02.00004', nombre: 'COMISIONES PROVINCIAL 6795', tipo: 'Gasto' },
+    ], { updateOnDuplicate: ['nombre', 'tipo', 'codigo'] });
     console.log('Plan de cuentas sembrado.');
 
     // --- 9. Asiento Manual de Ejemplo ---
@@ -169,9 +258,13 @@ const seedDatabase = async () => {
         }
     });
     if (created) {
+        // CORRECCIÓN: Buscar las cuentas por su código para obtener sus IDs UUID reales.
+        const cuentaCaja = await CuentaContable.findOne({ where: { codigo: '1.1.01.00001' } }); // EFECTIVO POR DEPOSITAR
+        const cuentaBancos = await CuentaContable.findOne({ where: { codigo: '1.1.02.00001' } }); // BANCO BANESCO 5215
+
         await AsientoManualEntry.bulkCreate([
-            { id: 'ame-1', asientoManualId: asiento.id, cuentaId: 'cta-1101', debe: 500.00, haber: 0.00 },
-            { id: 'ame-2', asientoManualId: asiento.id, cuentaId: 'cta-1102', debe: 0.00, haber: 500.00 }
+            { id: 'ame-1', asientoManualId: asiento.id, cuentaId: cuentaCaja.id, debe: 500.00, haber: 0.00 },
+            { id: 'ame-2', asientoManualId: asiento.id, cuentaId: cuentaBancos.id, debe: 0.00, haber: 500.00 }
         ]);
         console.log('Asiento manual de ejemplo creado.');
     } else {

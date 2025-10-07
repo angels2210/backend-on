@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { sequelize, syncDatabase } from './models/index.js';
 import cron from 'node-cron';
+import morgan from 'morgan';
 
 // Importar todas las rutas
 import authRoutes from './routes/auth.routes.js';
@@ -39,6 +40,10 @@ cron.schedule('0 */8 * * *', () => {
 });
 
 const app = express();
+
+// --- Middleware de Logging (Morgan) ---
+// Usamos el formato 'combined', que es un estándar e incluye la dirección IP del solicitante.
+app.use(morgan('combined'));
 
 // --- Configuración de CORS ---
 // Lista de orígenes permitidos.

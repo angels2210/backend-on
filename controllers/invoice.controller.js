@@ -14,6 +14,11 @@ export const createInvoice = async (req, res) => {
     // Start a managed transaction. Sequelize will automatically commit or roll back.
     const t = await sequelize.transaction();
     try {
+        // --- DIAGNÓSTICO: Imprimir el cuerpo de la solicitud para depuración ---
+        console.log("================== DATOS RECIBIDOS DEL FRONTEND ==================");
+        console.log(JSON.stringify(req.body, null, 2));
+        console.log("==================================================================");
+
         const { guide, ...invoiceData } = req.body;
         const { sender, receiver } = guide;
 
@@ -26,15 +31,25 @@ export const createInvoice = async (req, res) => {
         validateClient(sender, 'remitente');
         validateClient(receiver, 'destinatario');
 
+        // CORRECCIÓN: Extraemos solo los campos válidos del modelo Cliente para evitar el warning.
+        // Esto previene que campos extra (como 'email') se pasen a 'defaults'.
+        const getValidClientData = ({ idNumber, clientType, name, phone, address }) => ({
+            idNumber,
+            clientType,
+            name,
+            phone,
+            address
+        });
+
         // 2. Find or create clients within the transaction
         const [senderClient] = await Client.findOrCreate({
             where: { idNumber: sender.idNumber },
-            defaults: { ...sender, id: `C-${Date.now()}` },
+            defaults: { ...getValidClientData(sender), id: `C-${Date.now()}` },
             transaction: t
         });
         const [receiverClient] = await Client.findOrCreate({
             where: { idNumber: receiver.idNumber },
-            defaults: { ...receiver, id: `C-${Date.now() + 1}` },
+            defaults: { ...getValidClientData(receiver), id: `C-${Date.now() + 1}` },
             transaction: t
         });
 
@@ -45,7 +60,7 @@ export const createInvoice = async (req, res) => {
         }
 
         const nextInvoiceNum = (companyInfo.lastInvoiceNumber || 0) + 1;
-        const newInvoiceNumberFormatted = `F-${String(nextInvoiceNum).padStart(6, '0')}`;
+        const newInvoiceNumberFormatted = String(nextInvoiceNum).padStart(6, '0');
         const newControlNumber = String(nextInvoiceNum).padStart(8, '0');
         
         // 4. Update the counter within the same transaction
@@ -54,12 +69,13 @@ export const createInvoice = async (req, res) => {
 
         // 5. Create the new invoice
         const newInvoice = await Invoice.create({
-            ...invoiceData,
             id: `INV-${Date.now()}`,
             invoiceNumber: newInvoiceNumberFormatted,
             controlNumber: newControlNumber,
             clientName: senderClient.name,
             clientIdNumber: senderClient.idNumber,
+            date: invoiceData.date, // Usar la fecha del request
+            totalAmount: invoiceData.totalAmount, // Usar el total del request
             guide: { ...guide, sender: { ...sender, id: senderClient.id }, receiver: { ...receiver, id: receiverClient.id } },
             status: 'Activa',
             paymentStatus: 'Pendiente',
